@@ -12,9 +12,9 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.liumingyao</groupId>
-    <artifactId>springboot-init</artifactId>
+    <artifactId>yubi-backend</artifactId>
     <version>1.0-SNAPSHOT</version>
-    <name>springboot-init</name>
+    <name>yubi-backend</name>
     <properties>
         <java.version>1.8</java.version>
     </properties>
