@@ -36,7 +36,7 @@ BI（商业智能）：数据可视化，报表可视化系统
 
 基础流程：客户端输入分析诉求和原始数据，向业务后端发送请求。业务后端利用 AI 服务处理客户端数据，保持到数据库，并生成图表。处理后的数据由业务后端发送给 AI 服务，AI 服务生成结果并返回给后端，最终将结果返回给客户端展示。
 
-![image-20231005150042006](C:\Users\LiuMingyao\AppData\Roaming\Typora\typora-user-images\image-20231005150042006.png)
+![image-20231005150042006]([C:\Users\LiuMingyao\AppData\Roaming\Typora\typora-user-images\image-20231005150042006.png](https://github.com/Liumingyao666/github-img/blob/master/image-20231005150042006.png?raw=true))
 
 
 
@@ -45,7 +45,7 @@ BI（商业智能）：数据可视化，报表可视化系统
 优化流程（异步化）：客户端输入分析诉求和原始数据，向业务后端发送请求。业务后端将请求事件放入消息队列，并为客户端生成取餐号，让要生成图表的客户端去排队，消息队列根据 AI 服务负载情况，定期检查进度，如果 AI 服务还能处理更多的图表生成请求，就向任务处理模块发送消息。
 任务处理模块调用 AI 服务处理客户端数据，AI 服务异步生成结果返回给后端并保存到数据库，当后端的 AI 服务生成完毕后，可以通过向前端发送通知的方式，或者通过业务后端监控数据库中图表生成服务的状态，来确定生成结果是否可用。若生成结果可用，前端即可获取并处理相应的数据，最终将结果返回给客户端展示。（在此期间，用户可以去做自己的事情）
 
-![image-20231005150112288](C:\Users\LiuMingyao\AppData\Roaming\Typora\typora-user-images\image-20231005150112288.png)
+![image-20231005150112288]([C:\Users\LiuMingyao\AppData\Roaming\Typora\typora-user-images\image-20231005150112288.png](https://github.com/Liumingyao666/github-img/blob/master/image-20231005150112288.png?raw=true))
 
 
 
