@@ -3,10 +3,10 @@
 #
 
 -- 创建库
-create database if not exists yuso;
+create database if not exists yubi;
 
 -- 切换库
-use yuso;
+use yubi;
 
 -- 用户表
 create table if not exists user
