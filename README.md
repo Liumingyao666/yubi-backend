@@ -36,7 +36,7 @@ BI（商业智能）：数据可视化，报表可视化系统
 
 基础流程：客户端输入分析诉求和原始数据，向业务后端发送请求。业务后端利用 AI 服务处理客户端数据，保持到数据库，并生成图表。处理后的数据由业务后端发送给 AI 服务，AI 服务生成结果并返回给后端，最终将结果返回给客户端展示。
 
-![image-20231005150042006](https://github.com/Liumingyao666/github-img/blob/master/image-20231005150042006.png?raw=true)
+![image-20231005150042006](D:\liumingyao\study\文档\智能BI项目文档.assets\image-20231005150042006.png)
 
 
 
@@ -45,7 +45,7 @@ BI（商业智能）：数据可视化，报表可视化系统
 优化流程（异步化）：客户端输入分析诉求和原始数据，向业务后端发送请求。业务后端将请求事件放入消息队列，并为客户端生成取餐号，让要生成图表的客户端去排队，消息队列根据 AI 服务负载情况，定期检查进度，如果 AI 服务还能处理更多的图表生成请求，就向任务处理模块发送消息。
 任务处理模块调用 AI 服务处理客户端数据，AI 服务异步生成结果返回给后端并保存到数据库，当后端的 AI 服务生成完毕后，可以通过向前端发送通知的方式，或者通过业务后端监控数据库中图表生成服务的状态，来确定生成结果是否可用。若生成结果可用，前端即可获取并处理相应的数据，最终将结果返回给客户端展示。（在此期间，用户可以去做自己的事情）
 
-![image-20231005150112288](https://raw.githubusercontent.com/Liumingyao666/github-img/master/image-20231005150112288.png)
+![image-20231005150112288](D:\liumingyao\study\文档\智能BI项目文档.assets\image-20231005150112288.png)
 
 
 
@@ -200,7 +200,7 @@ create table if not exists chart
 
 
 
-### 前后端基础开发
+#### 前后端基础开发
 
 1. 图表信息的crud
 
@@ -236,7 +236,122 @@ create table if not exists chart
    };
    ~~~
 
-   
+
+
+### Day2
+
+#### 后端启动项目端口冲突问题解决
+
+原因：Windows Hyper-V 虚拟化平台占用了端口
+
+先使用：netsh interface ipv4 show excludedportrange protocol=tcp 查看被占用的端口，然后选择一个没被占用的端口启动项目
+
+
+
+#### 智能分析业务开发
+
+业务流程：
+
+1. 用户输入
+   - 分析目标
+   - 上传原始数据（excel）
+   - 更精细化的控制图表：比如图表类型，图表名称等
+2. 后端校验
+   - 校验用户的输入是否合法（比如长度）
+   - 成本控制（次数统计和校验，鉴权等）
+3. 把处理后的数据输入给AI模型（调用AI接口），让AI模型给我们提供图标信息，结论文本
+4. 调用时加系统预设（提前告诉他职责、功能、回复格式要求） + 分析目标 + 压缩后的数据
+5. 图标信息（是一段json配置，是一段代码），结论文本在前端进行展示
+
+
+
+#### 使用csv对excel文件的数据进行提取和压缩
+
+开源库：https://easyexcel.opensource.alibaba.com/docs/current/
+
+~~~java
+ /**
+     * excel 转 csv
+     *
+     * @param multipartFile
+     * @return
+     */
+    public static String excelToCsv(MultipartFile multipartFile){
+//        File file = null;
+//        try {
+//            file = ResourceUtils.getFile("classpath:网站数据.xlsx");
+//        } catch (FileNotFoundException e) {
+//            throw new RuntimeException(e);
+//        }
+        // 读取数据
+        List<Map<Integer, String>> list = null;
+        try {
+            list = EasyExcel.read(multipartFile.getInputStream())
+                    .excelType(ExcelTypeEnum.XLSX)
+                    .sheet()
+                    .headRowNumber(0)
+                    .doReadSync();
+        } catch (IOException e) {
+            log.error("excel读取失败", e);
+        }
+        if (CollUtil.isEmpty(list)) {
+            return "";
+        }
+
+        // 转化为csv
+        StringBuilder stringBuilder = new StringBuilder();
+        // 读取表头
+        LinkedHashMap<Integer, String> headerMap = (LinkedHashMap<Integer, String>) list.get(0);
+        List<String> headerList = headerMap.values().stream().filter(ObjectUtils::isNotEmpty).collect(Collectors.toList());
+        stringBuilder.append(StringUtils.join(headerList, ",")).append("\n");
+        // 读取数据
+        for (int i = 1; i < list.size(); i++) {
+            LinkedHashMap<Integer, String> dataMap = (LinkedHashMap<Integer, String>) list.get(i);
+            List<String> dataList = dataMap.values().stream().filter(data -> ObjectUtils.isNotEmpty(data)).collect(Collectors.toList());
+            stringBuilder.append(StringUtils.join(dataList, ",")).append("\n");
+        }
+        return stringBuilder.toString();
+    }
+~~~
+
+~~~java
+ /**
+     * 智能分析
+     *
+     * @param multipartFile
+     * @param genChartByAiRequest
+     * @param request
+     * @return
+     */
+    @PostMapping("/gen")
+    public BaseResponse<String> genChartByAi(@RequestPart("file") MultipartFile multipartFile,
+                                             GenChartByAiRequest genChartByAiRequest, HttpServletRequest request) {
+     String name = genChartByAiRequest.getName();
+     String goal = genChartByAiRequest.getGoal();
+     String chartType = genChartByAiRequest.getChartType();
+
+     // 校验
+     ThrowUtils.throwIf(StringUtils.isBlank(goal), ErrorCode.PARAMS_ERROR, "目标为空");
+     ThrowUtils.throwIf(StringUtils.isNotBlank(name) && name.length() > 100, ErrorCode.PARAMS_ERROR, "名称过长");
+
+     // 用户输入
+     StringBuilder userInput = new StringBuilder();
+     userInput.append("你是一名数据分析师，接下来我会给你我的分析目标和原始数据，请告诉我分析结论").append("\n");
+     userInput.append("分析目标: ").append(goal).append("\n");
+     //压缩后的数据
+     String result = ExcelUtils.excelToCsv(multipartFile);
+     userInput.append("原始数据: ").append(result).append("\n");
+     return ResultUtils.success(userInput.toString());
+
+
+    }
+~~~
+
+
+
+测试结果：
+
+![image-20231006153712365](D:\liumingyao\study\文档\智能BI项目文档.assets\image-20231006153712365.png)
 
 
 
