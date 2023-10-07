@@ -1,6 +1,5 @@
 package com.liumingyao.springbootinit.manager;
 
-import com.liumingyao.springbootinit.CosManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 

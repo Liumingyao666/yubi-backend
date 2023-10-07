@@ -1,4 +1,4 @@
-package com.liumingyao.springbootinit;
+package com.liumingyao.springbootinit.manager;
 
 import com.qcloud.cos.COSClient;
 import com.qcloud.cos.model.PutObjectRequest;

@@ -1,4 +1,4 @@
-package com.liumingyao.springbootinit;
+package com.liumingyao.springbootinit.manager;
 
 import com.liumingyao.springbootinit.common.ErrorCode;
 import com.liumingyao.springbootinit.exception.BusinessException;

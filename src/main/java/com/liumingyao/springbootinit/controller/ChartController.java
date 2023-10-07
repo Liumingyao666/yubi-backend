@@ -1,28 +1,26 @@
 package com.liumingyao.springbootinit.controller;
 
+import cn.hutool.core.io.FileUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.google.gson.Gson;
-import com.liumingyao.springbootinit.AiManager;
+import com.liumingyao.springbootinit.manager.AiManager;
 import com.liumingyao.springbootinit.annotation.AuthCheck;
 import com.liumingyao.springbootinit.common.BaseResponse;
 import com.liumingyao.springbootinit.common.DeleteRequest;
 import com.liumingyao.springbootinit.common.ErrorCode;
 import com.liumingyao.springbootinit.common.ResultUtils;
-import com.liumingyao.springbootinit.constant.FileConstant;
 import com.liumingyao.springbootinit.constant.UserConstant;
 import com.liumingyao.springbootinit.exception.BusinessException;
 import com.liumingyao.springbootinit.exception.ThrowUtils;
+import com.liumingyao.springbootinit.manager.RedisLimiterManager;
 import com.liumingyao.springbootinit.model.dto.chart.*;
-import com.liumingyao.springbootinit.model.dto.file.UploadFileRequest;
 import com.liumingyao.springbootinit.model.entity.Chart;
 import com.liumingyao.springbootinit.model.entity.User;
-import com.liumingyao.springbootinit.model.enums.FileUploadBizEnum;
 import com.liumingyao.springbootinit.model.vo.BiResponse;
 import com.liumingyao.springbootinit.service.ChartService;
 import com.liumingyao.springbootinit.service.UserService;
 import com.liumingyao.springbootinit.utils.ExcelUtils;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.*;
@@ -30,7 +28,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
-import java.io.File;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * 帖子接口
@@ -51,6 +50,9 @@ public class ChartController {
 
     @Resource
     private AiManager aiManager;
+
+    @Resource
+    private RedisLimiterManager redisLimiterManager;
 
     private final static Gson GSON = new Gson();
 
@@ -235,7 +237,23 @@ public class ChartController {
         ThrowUtils.throwIf(StringUtils.isBlank(goal), ErrorCode.PARAMS_ERROR, "目标为空");
         ThrowUtils.throwIf(StringUtils.isNotBlank(name) && name.length() > 100, ErrorCode.PARAMS_ERROR, "名称过长");
 
+        // 文件校验
+        long size = multipartFile.getSize();
+        String originalFilename = multipartFile.getOriginalFilename();
+
+        // 校验文件大小
+        final long ONE_MB = 1024 * 1024L;
+        ThrowUtils.throwIf(size > ONE_MB, ErrorCode.PARAMS_ERROR, "文件超过1MB");
+
+        // 校验文件后缀
+        String suffix = FileUtil.getSuffix(originalFilename);
+        final List<String> validFileSuffixList = Arrays.asList("png", "jpg", "svg", "webp", "jpeg");
+        ThrowUtils.throwIf(!validFileSuffixList.contains(suffix), ErrorCode.PARAMS_ERROR, "文件后缀非法");
+
         User loginUser = userService.getLoginUser(request);
+
+        // 限流判断,每个用户一个限流器
+        redisLimiterManager.doRateLimit("genChartByAi_" + String.valueOf(loginUser.getId()));
 
         // 用户输入
         StringBuilder userInput = new StringBuilder();
