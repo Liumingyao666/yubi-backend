@@ -1,4 +1,4 @@
-package springbootinit.service;
+package com.liumingyao.springbootinit.service;
 
 import com.liumingyao.springbootinit.model.entity.User;
 import com.liumingyao.springbootinit.service.PostThumbService;

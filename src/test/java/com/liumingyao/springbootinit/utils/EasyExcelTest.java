@@ -1,4 +1,4 @@
-package springbootinit.utils;
+package com.liumingyao.springbootinit.utils;
 
 import com.alibaba.excel.EasyExcel;
 import com.alibaba.excel.support.ExcelTypeEnum;

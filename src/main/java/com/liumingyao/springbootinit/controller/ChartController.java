@@ -2,6 +2,7 @@ package com.liumingyao.springbootinit.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.google.gson.Gson;
+import com.liumingyao.springbootinit.AiManager;
 import com.liumingyao.springbootinit.annotation.AuthCheck;
 import com.liumingyao.springbootinit.common.BaseResponse;
 import com.liumingyao.springbootinit.common.DeleteRequest;
@@ -16,6 +17,7 @@ import com.liumingyao.springbootinit.model.dto.file.UploadFileRequest;
 import com.liumingyao.springbootinit.model.entity.Chart;
 import com.liumingyao.springbootinit.model.entity.User;
 import com.liumingyao.springbootinit.model.enums.FileUploadBizEnum;
+import com.liumingyao.springbootinit.model.vo.BiResponse;
 import com.liumingyao.springbootinit.service.ChartService;
 import com.liumingyao.springbootinit.service.UserService;
 import com.liumingyao.springbootinit.utils.ExcelUtils;
@@ -46,6 +48,9 @@ public class ChartController {
 
     @Resource
     private UserService userService;
+
+    @Resource
+    private AiManager aiManager;
 
     private final static Gson GSON = new Gson();
 
@@ -220,27 +225,59 @@ public class ChartController {
      * @return
      */
     @PostMapping("/gen")
-    public BaseResponse<String> genChartByAi(@RequestPart("file") MultipartFile multipartFile,
+    public BaseResponse<BiResponse> genChartByAi(@RequestPart("file") MultipartFile multipartFile,
                                              GenChartByAiRequest genChartByAiRequest, HttpServletRequest request) {
-     String name = genChartByAiRequest.getName();
-     String goal = genChartByAiRequest.getGoal();
-     String chartType = genChartByAiRequest.getChartType();
+        String name = genChartByAiRequest.getName();
+        String goal = genChartByAiRequest.getGoal();
+        String chartType = genChartByAiRequest.getChartType();
 
-     // 校验
-     ThrowUtils.throwIf(StringUtils.isBlank(goal), ErrorCode.PARAMS_ERROR, "目标为空");
-     ThrowUtils.throwIf(StringUtils.isNotBlank(name) && name.length() > 100, ErrorCode.PARAMS_ERROR, "名称过长");
+        // 校验
+        ThrowUtils.throwIf(StringUtils.isBlank(goal), ErrorCode.PARAMS_ERROR, "目标为空");
+        ThrowUtils.throwIf(StringUtils.isNotBlank(name) && name.length() > 100, ErrorCode.PARAMS_ERROR, "名称过长");
 
-     // 用户输入
-     StringBuilder userInput = new StringBuilder();
-     userInput.append("你是一名数据分析师，接下来我会给你我的分析目标和原始数据，请告诉我分析结论").append("\n");
-     userInput.append("分析目标: ").append(goal).append("\n");
-     //压缩后的数据
-     String result = ExcelUtils.excelToCsv(multipartFile);
-     userInput.append("原始数据: ").append(result).append("\n");
-     return ResultUtils.success(userInput.toString());
+        User loginUser = userService.getLoginUser(request);
 
+        // 用户输入
+        StringBuilder userInput = new StringBuilder();
+        userInput.append("分析需求: ").append("\n");
+
+        //拼接分析目标
+        String userGoal = goal;
+        if (StringUtils.isNotBlank(chartType)){
+            userGoal += ",请使用" + chartType;
+        }
+        userInput.append(userGoal).append("\n");
+        //压缩后的数
+        userInput.append("原始数据: ").append("\n");
+        String result = ExcelUtils.excelToCsv(multipartFile);
+        userInput.append(result).append("\n");
+
+        String doChat = aiManager.doChat(1710477638751358977L, userInput.toString());
+        String[] splits = doChat.split("【【【【【");
+        if (splits.length < 3){
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "AI生成错误");
+        }
+
+        String genChart = splits[1].trim();
+        String genResult = splits[2].trim();
+
+        //插入到数据库
+        Chart chart = new Chart();
+        chart.setName(name);
+        chart.setGoal(goal);
+        chart.setChartData(result);
+        chart.setChartType(chartType);
+        chart.setGenChart(genChart);
+        chart.setGenResult(genResult);
+        chart.setUserId(loginUser.getId());
+        boolean save = chartService.save(chart);
+        ThrowUtils.throwIf(!save, ErrorCode.SYSTEM_ERROR, "图表保存失败");
+
+        BiResponse biResponse = new BiResponse();
+        biResponse.setGenChart(genChart);
+        biResponse.setGenResult(genResult);
+
+        return ResultUtils.success(biResponse);
 
     }
-
-
 }

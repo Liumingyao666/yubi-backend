@@ -1,4 +1,4 @@
-package springbootinit.service;
+package com.liumingyao.springbootinit.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;

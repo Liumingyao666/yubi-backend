@@ -1,25 +1,26 @@
-package springbootinit.manager;
+package com.liumingyao.springbootinit;
 
-import com.liumingyao.springbootinit.manager.CosManager;
+import com.liumingyao.springbootinit.config.WxOpenConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import javax.annotation.Resource;
 
 /**
- * Cos 操作测试
+ * 主类测试
  *
  * @author <a href="https://github.com/Liumingyao666">刘铭垚</a>
  *   
  */
 @SpringBootTest
-class CosManagerTest {
+class MainApplicationTests {
 
     @Resource
-    private CosManager cosManager;
+    private WxOpenConfig wxOpenConfig;
 
     @Test
-    void putObject() {
-        cosManager.putObject("test", "test.json");
+    void contextLoads() {
+        System.out.println(wxOpenConfig);
     }
+
 }

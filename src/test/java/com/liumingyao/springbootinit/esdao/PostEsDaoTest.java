@@ -1,4 +1,4 @@
-package springbootinit.esdao;
+package com.liumingyao.springbootinit.esdao;
 
 import com.liumingyao.springbootinit.esdao.PostEsDao;
 import com.liumingyao.springbootinit.model.dto.post.PostEsDTO;

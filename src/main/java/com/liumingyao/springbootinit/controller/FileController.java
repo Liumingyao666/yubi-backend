@@ -6,7 +6,7 @@ import com.liumingyao.springbootinit.common.ErrorCode;
 import com.liumingyao.springbootinit.common.ResultUtils;
 import com.liumingyao.springbootinit.constant.FileConstant;
 import com.liumingyao.springbootinit.exception.BusinessException;
-import com.liumingyao.springbootinit.manager.CosManager;
+import com.liumingyao.springbootinit.CosManager;
 import com.liumingyao.springbootinit.model.dto.file.UploadFileRequest;
 import com.liumingyao.springbootinit.model.entity.User;
 import com.liumingyao.springbootinit.model.enums.FileUploadBizEnum;

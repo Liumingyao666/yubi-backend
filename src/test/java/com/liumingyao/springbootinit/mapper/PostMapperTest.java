@@ -1,4 +1,4 @@
-package springbootinit.mapper;
+package com.liumingyao.springbootinit.mapper;
 
 import com.liumingyao.springbootinit.mapper.PostMapper;
 import com.liumingyao.springbootinit.model.entity.Post;
