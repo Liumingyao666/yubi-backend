@@ -38,6 +38,14 @@ spring:
 #    uris: http://localhost:9200
 #    username: root
 #    password: 123456
+  # rabbitmq配置
+  rabbitmq:
+    host: 180.76.180.208
+    port: 5672
+    username: itcast
+    password: 123321
+    virtual-host: /
+    connection-timeout: 0
   # 文件上传
   servlet:
     multipart:

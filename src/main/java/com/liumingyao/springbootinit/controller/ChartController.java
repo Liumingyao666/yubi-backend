@@ -3,6 +3,7 @@ package com.liumingyao.springbootinit.controller;
 import cn.hutool.core.io.FileUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.google.gson.Gson;
+import com.liumingyao.springbootinit.bizmq.BiMessageProducer;
 import com.liumingyao.springbootinit.manager.AiManager;
 import com.liumingyao.springbootinit.annotation.AuthCheck;
 import com.liumingyao.springbootinit.common.BaseResponse;
@@ -60,7 +61,8 @@ public class ChartController {
     @Resource
     private ThreadPoolExecutor threadPoolExecutor;
 
-    private final static Gson GSON = new Gson();
+    @Resource
+    private BiMessageProducer biMessageProducer;
 
     // region 增删改查
 
@@ -252,7 +254,7 @@ public class ChartController {
 
         // 校验文件后缀
         String suffix = FileUtil.getSuffix(originalFilename);
-        final List<String> validFileSuffixList = Arrays.asList("png", "jpg", "svg", "webp", "jpeg");
+        final List<String> validFileSuffixList = Arrays.asList("xlsx", "xls");
         ThrowUtils.throwIf(!validFileSuffixList.contains(suffix), ErrorCode.PARAMS_ERROR, "文件后缀非法");
 
         User loginUser = userService.getLoginUser(request);
@@ -264,13 +266,13 @@ public class ChartController {
         StringBuilder userInput = new StringBuilder();
         userInput.append("分析需求: ").append("\n");
 
-        //拼接分析目标
+        // 拼接分析目标
         String userGoal = goal;
         if (StringUtils.isNotBlank(chartType)){
             userGoal += ",请使用" + chartType;
         }
         userInput.append(userGoal).append("\n");
-        //压缩后的数
+        // 压缩后的数
         userInput.append("原始数据: ").append("\n");
         String result = ExcelUtils.excelToCsv(multipartFile);
         userInput.append(result).append("\n");
@@ -284,7 +286,7 @@ public class ChartController {
         String genChart = splits[1].trim();
         String genResult = splits[2].trim();
 
-        //插入到数据库
+        // 插入到数据库
         Chart chart = new Chart();
         chart.setName(name);
         chart.setGoal(goal);
@@ -293,6 +295,7 @@ public class ChartController {
         chart.setGenChart(genChart);
         chart.setGenResult(genResult);
         chart.setUserId(loginUser.getId());
+        chart.setStatus(ChartStatusEnum.SUCCEED.getValue());
         boolean save = chartService.save(chart);
         ThrowUtils.throwIf(!save, ErrorCode.SYSTEM_ERROR, "图表保存失败");
 
@@ -345,18 +348,18 @@ public class ChartController {
         StringBuilder userInput = new StringBuilder();
         userInput.append("分析需求: ").append("\n");
 
-        //拼接分析目标
+        // 拼接分析目标
         String userGoal = goal;
         if (StringUtils.isNotBlank(chartType)){
             userGoal += ",请使用" + chartType;
         }
         userInput.append(userGoal).append("\n");
-        //压缩后的数
+        // 压缩后的数
         userInput.append("原始数据: ").append("\n");
         String result = ExcelUtils.excelToCsv(multipartFile);
         userInput.append(result).append("\n");
 
-        //插入到数据库
+        // 插入到数据库
         Chart chart = new Chart();
         chart.setName(name);
         chart.setGoal(goal);
@@ -406,6 +409,70 @@ public class ChartController {
         biResponse.setChartId(chartResult.getId());
         biResponse.setGenChart(chartResult.getGenChart());
         biResponse.setGenResult(chartResult.getGenResult());
+
+        return ResultUtils.success(biResponse);
+    }
+
+    @PostMapping("/gen/async/mq")
+    public BaseResponse<BiResponse> genChartByAiAsyncMq(@RequestPart("file") MultipartFile multipartFile,
+                                                      GenChartByAiRequest genChartByAiRequest, HttpServletRequest request) {
+        String name = genChartByAiRequest.getName();
+        String goal = genChartByAiRequest.getGoal();
+        String chartType = genChartByAiRequest.getChartType();
+
+        // 校验
+        ThrowUtils.throwIf(StringUtils.isBlank(goal), ErrorCode.PARAMS_ERROR, "目标为空");
+        ThrowUtils.throwIf(StringUtils.isNotBlank(name) && name.length() > 100, ErrorCode.PARAMS_ERROR, "名称过长");
+
+        // 文件校验
+        long size = multipartFile.getSize();
+        String originalFilename = multipartFile.getOriginalFilename();
+
+        // 校验文件大小
+        final long ONE_MB = 1024 * 1024L;
+        ThrowUtils.throwIf(size > ONE_MB, ErrorCode.PARAMS_ERROR, "文件超过1MB");
+
+        // 校验文件后缀
+        String suffix = FileUtil.getSuffix(originalFilename);
+        final List<String> validFileSuffixList = Arrays.asList("xlsx", "xls");
+        ThrowUtils.throwIf(!validFileSuffixList.contains(suffix), ErrorCode.PARAMS_ERROR, "文件后缀非法");
+
+        User loginUser = userService.getLoginUser(request);
+
+        // 限流判断,每个用户一个限流器
+        redisLimiterManager.doRateLimit("genChartByAi_" + String.valueOf(loginUser.getId()));
+
+        // 用户输入
+        StringBuilder userInput = new StringBuilder();
+        userInput.append("分析需求: ").append("\n");
+
+        // 拼接分析目标
+        String userGoal = goal;
+        if (StringUtils.isNotBlank(chartType)){
+            userGoal += ",请使用" + chartType;
+        }
+        userInput.append(userGoal).append("\n");
+        // 压缩后的数
+        userInput.append("原始数据: ").append("\n");
+        String result = ExcelUtils.excelToCsv(multipartFile);
+        userInput.append(result).append("\n");
+
+        // 插入到数据库
+        Chart chart = new Chart();
+        chart.setName(name);
+        chart.setGoal(goal);
+        chart.setChartData(result);
+        chart.setChartType(chartType);
+        chart.setStatus(ChartStatusEnum.WAIT.getValue());
+        chart.setUserId(loginUser.getId());
+        boolean save = chartService.save(chart);
+        ThrowUtils.throwIf(!save, ErrorCode.SYSTEM_ERROR, "图表保存失败");
+        long newChartId = chart.getId();
+
+        biMessageProducer.sendMessage(String.valueOf(newChartId));
+
+        BiResponse biResponse = new BiResponse();
+        biResponse.setChartId(chart.getId());
 
         return ResultUtils.success(biResponse);
     }
