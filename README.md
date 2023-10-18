@@ -24,7 +24,7 @@
 
 查看已生成的表格
 
-![image-20231018163823936](D:\liumingyao\study\文档\智能BI项目文档.assets\image-20231018163823936.png)
+![image-20231018163823936](https://github.com/Liumingyao666/github-img/blob/master/img/image-20231018163823936.png?raw=true)
 
 
 
