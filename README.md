@@ -4,21 +4,21 @@
 
 登录界面
 
-![image-20231018163437013](D:\liumingyao\study\文档\智能BI项目文档.assets\image-20231018163437013.png)
+![image-20231018163437013](https://github.com/Liumingyao666/github-img/blob/master/img/image-20231018163437013.png?raw=true)
 
 
 
 智能分析界面
 
-![image-20231018163608684](D:\liumingyao\study\文档\智能BI项目文档.assets\image-20231018163608684.png)
+![image-20231018163608684](https://github.com/Liumingyao666/github-img/blob/master/img/image-20231018163608684.png?raw=true)
 
 智能分析（异步）界面
 
-![image-20231018163652897](D:\liumingyao\study\文档\智能BI项目文档.assets\image-20231018163652897.png)
+![image-20231018163652897](https://github.com/Liumingyao666/github-img/blob/master/img/image-20231018163652897.png?raw=true)
 
 异步任务会给前端一个状态（图表生成中），在图表管理页面可以预览生成状态，等待AICG平台处理。
 
-![image-20231018163742361](D:\liumingyao\study\文档\智能BI项目文档.assets\image-20231018163742361.png)
+![image-20231018163742361](https://github.com/Liumingyao666/github-img/blob/master/img/image-20231018163742361.png?raw=true)
 
 图表管理页面
 
